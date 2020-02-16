@@ -36,17 +36,45 @@ do
 	root=$(($root+$boot))
 done
 
+# test 1
+echo " test 1"
 echo " swap = $swap "
 echo " root = $root "
 
+# RAZ du disque
+wipefs -a $DISK_NAME
+partprobe $DISK_NAME
+
+# var part
+swap_fin=$(( $boot + $swap +1 ))B
+boot=$boot'B'
+
+# test 2
+echo " test 2 "
+echo " swap = $swap "
+echo " boot = $boor "
 
 # verifier le type de bios ---> ls /sys/firmware/efi/efivars
 if [ -f "/sys/firmware/efi/efivars" ]
 then
 	efi=true
 	echo "UEFI detecté"
+	parted --script "${disk}" -- mklabel gpt \
+  	mkpart ESP fat32 1B ${$boot} \
+  	set 1 boot on \
+  	mkpart primary linux-swap ${$boot} ${swap_fin} \
+  	mkpart primary ext4 ${swap_fin} 100%
 else
 	efi=false
 	echo "LEGACY detecté"
+	parted --script "${disk}" -- mklabel gpt \
+  	mkpart legacy_boot fat32 1B ${$boot} \
+  	set 1 boot on \
+  	mkpart primary linux-swap ${$boot} ${swap_fin} \
+  	mkpart primary ext4 ${swap_fin} 100%
+
 fi
-#
+#check bolean
+
+# test
+fdisk -l
