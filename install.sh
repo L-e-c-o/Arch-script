@@ -26,8 +26,8 @@ fi
 
 # partionnement  
 ram=$( sed -n '1p' /proc/meminfo  | awk -F " " {'print $2'}) 
-swap=$ram
-boot=536870900
+swap=$(( $ram / 1048576))
+boot=$(( 536870900 / 1048576))
 root=$(($space-($swap+$boot)))
 
 while [ $root -lt $swap  ]
@@ -40,18 +40,18 @@ done
 echo " test 1"
 echo " swap = $swap "
 echo " root = $root "
+echo " boot = $boot "
 
 # RAZ du disque
-wipefs -a $DISK_NAME
-partprobe $DISK_NAME
+wipefs -a $disk
+partprobe $disk
 
 # var part
-swap_fin=$(( $boot + $swap +1 ))B
-boot=$boot'B'
+swap_fin=$(( $boot + $swap +1 ))
 
 # test 2
 echo " test 2 "
-echo " swap = $swap "
+echo " swap_fin = $swap_fin "
 echo " boot = $boor "
 
 # verifier le type de bios ---> ls /sys/firmware/efi/efivars
@@ -61,16 +61,16 @@ then
 	echo "UEFI detecté"
 	parted --script "${disk}" -- mklabel gpt \
   	mkpart ESP fat32 1B ${$boot} \
-  	set 1 boot on \
+  	set 1 esp on \
   	mkpart primary linux-swap ${$boot} ${swap_fin} \
   	mkpart primary ext4 ${swap_fin} 100%
 else
 	efi=false
 	echo "LEGACY detecté"
 	parted --script "${disk}" -- mklabel gpt \
-  	mkpart legacy_boot fat32 1B ${$boot} \
+  	mkpart legacy_boot fat32 1B ${boot} \
   	set 1 boot on \
-  	mkpart primary linux-swap ${$boot} ${swap_fin} \
+  	mkpart primary linux-swap ${boot} ${swap_fin} \
   	mkpart primary ext4 ${swap_fin} 100%
 
 fi
