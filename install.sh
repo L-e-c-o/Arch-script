@@ -128,4 +128,4 @@ exit\n"
 # chroot + script
 echo -e $config > /mnt/config.sh
 chmod +x /mnt/config.sh
-#arch-chroot /mnt ./config.sh
+arch-chroot /mnt ./config.sh
