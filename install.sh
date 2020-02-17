@@ -46,18 +46,6 @@ then
 	exit
 fi
 
-#while [ $root -lt $swap  ]
-#do
-#	swap=$(($swap-$boot))
-#	root=$(($root+$boot))
-#done
-
-# test 1
-echo " test 1"
-echo " ram = $ram "
-echo " swap = $swap "
-echo " boot = $boot "
-
 # RAZ du disque
 wipefs -a $disk
 partprobe $disk
@@ -66,12 +54,7 @@ partprobe $disk
 swap_fin=$(( $boot + $swap +1 ))
 root=$((space-(swap+boot)))
 
-# test 2
-echo " test 2 "
-echo " swap_fin = $swap_fin "
-echo " boot = $boot "
-
-# verifier le type de bios ---> ls /sys/firmware/efi/efivars
+# verifier le type de bios 
 if [ -e "/sys/firmware/efi/efivars" ]
 then
 	efi=true
@@ -93,7 +76,58 @@ else
   	mkpart primary ext4 ${swap_fin} 100%
 
 fi
-#check bolean
 
-# test
-fdisk -l
+# formatage 
+mkfs.fat32 ${disk}1
+mkswap ${disk}2
+swapon ${disk}2
+mkfs.ext4 ${disk}3
+partprobe $disk
+
+# mnt
+mount ${disk}3 /mnt
+if [ efi == true ]
+then
+	mkdir -p /mnt/efi
+	mount ${disk}1 /mnt/efi
+	# bootstraping
+	pacstrap /mnt base linux linux-firmware grub dhcpcd efibootmg
+else
+then
+	# bootstraping
+	pacstrap /mnt base linux linux-firmware grub dhcpcd	
+fi
+
+# generation du fichier fstab
+genfstab -U /mnt >> /mnt/etc/fstab
+
+config="ln -sf /usr/share/zoneinfo/Europe/Paris /etc/localtime\n
+hwclock --systohc\n
+echo 'fr_FR.UTF-8 UTF-8' >> /etc/locale.gen\n
+mkdir /etc/locale.conf\n
+echo 'LANG=fr_FR.UTF-8' >> /etc/locale.conf\n
+export LANG=/etc/locale.conf\n
+locale-gen\n
+echo KEYMAP=fr >> /etc/vconsole.conf\n
+echo Linux4life >> /etc/hostname\n
+echo \"127.0.0.1		localhost\" >> /etc/hosts\n
+echo \"::1			localhost\" >> /etc/hosts\n
+echo \"127.0.1.1		Linux4life.localdomain	Linux4life\" >> /etc/hosts\n
+echo ' Entrez un mot de passe de root :'
+read mdp
+echo -e \"$mdp\\n$mdp\" | (passwd root)\n
+if [ efi==false ]
+then\n
+grub-install --target=i386-pc \"${DISK_NAME}\"\n
+else\n
+grub-install --target=x86_64-efi --efi-directory=/efi --bootloader-id=\"My Firs Arch Linux\"\n
+fi\n
+grub-mkconfig -o /boot/grub/grub.cfg\n
+exit\n"
+	
+
+
+# chroot + script
+echo -e $config > /mnt/config.sh
+chmod +x /mnt/config.sh
+arch-chroot /mnt ./config.sh
