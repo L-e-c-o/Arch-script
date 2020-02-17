@@ -25,7 +25,7 @@ then
 fi
 
 # partionnement  
-ram=$( sed -n '1p' /proc/meminfo  | awk -F " " {'print $2 / 1024'})
+ram=$( free --si --mega | grep Mem | awk -F " " {'print $2'})
 
 if [ $ram -lt 8000 ]
 then
