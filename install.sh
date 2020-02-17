@@ -101,6 +101,7 @@ fi
 # generation du fichier fstab
 genfstab -U /mnt >> /mnt/etc/fstab
 
+# script de config
 config="ln -sf /usr/share/zoneinfo/Europe/Paris /etc/localtime\n
 hwclock --systohc\n
 echo 'fr_FR.UTF-8 UTF-8' >> /etc/locale.gen\n
