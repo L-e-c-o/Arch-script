@@ -118,7 +118,7 @@ if [ ${efi}==false ]\n
 then\n
 grub-install --target=i386-pc \"${disk}\"\n
 else\n
-grub-install --target=x86_64-efi --efi-directory=/efi --bootloader-id=\"My Firs Arch Linux\"\n
+grub-install --target=x86_64-efi --efi-directory=/efi --bootloader-id=\"Arch Linux\"\n
 fi\n
 grub-mkconfig -o /boot/grub/grub.cfg\n
 exit\n"
