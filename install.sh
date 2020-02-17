@@ -78,7 +78,7 @@ else
 fi
 
 # formatage 
-mkfs.fat -F32 ${disk}1
+mkfs.vfat -F 32 ${disk}1
 mkswap ${disk}2
 swapon ${disk}2
 mkfs.ext4 ${disk}3
