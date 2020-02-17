@@ -60,7 +60,7 @@ then
 	efi=true
 	echo "UEFI detecté"
 	parted --script "${disk}" -- mklabel gpt \
-  	mkpart ESP fat32 1 ${$boot} \
+  	mkpart ESP fat32 1 ${boot} \
   	set 1 esp on \
   	mkpart primary linux-swap ${boot} ${swap_fin} \
   	mkpart primary ext4 ${swap_fin} 100%
