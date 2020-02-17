@@ -38,6 +38,7 @@ done
 
 # test 1
 echo " test 1"
+echo " ram = $ram "
 echo " swap = $swap "
 echo " root = $root "
 echo " boot = $boot "
