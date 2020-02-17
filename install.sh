@@ -115,7 +115,7 @@ echo \"127.0.1.1		Linux4life.localdomain	Linux4life\" >> /etc/hosts\n
 echo ' Entrez un mot de passe de root :'\n
 read mdp \n
 echo -e \"$mdp\\\n$mdp\" | (passwd root)\n
-if [ $efi==false ]\n
+if [ ${efi}==false ]\n
 then\n
 grub-install --target=i386-pc \"${disk}\"\n
 else\n
