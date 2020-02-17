@@ -72,7 +72,7 @@ else
 	echo "LEGACY detecté"
 	parted --script "${disk}" -- mklabel gpt \
   	mkpart legacy_boot fat32 1 ${boot} \
-  	set 1 legacy_boot on \
+  	set 1 bios_grup on \
   	mkpart primary linux-swap ${boot} ${swap_fin} \
   	mkpart primary ext4 ${swap_fin} 100%
 fi
