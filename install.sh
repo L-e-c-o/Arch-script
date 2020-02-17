@@ -103,10 +103,9 @@ genfstab -U /mnt >> /mnt/etc/fstab
 # script de config
 config="ln -sf /usr/share/zoneinfo/Europe/Paris /etc/localtime\n
 hwclock --systohc\n
-echo 'fr_FR.UTF-8 UTF-8' >> /etc/locale.gen\n
-mkdir /etc/locale.conf\n
+echo fr_FR.UTF-8 UTF-8 >> /etc/locale.gen\n
 echo LANG=fr_FR.UTF-8 >> /etc/locale.conf\n
-export LANG=/etc/locale.conf\n
+export LANG=fr_FR.UTF-8\n
 locale-gen\n
 echo KEYMAP=fr >> /etc/vconsole.conf\n
 echo Linux4life >> /etc/hostname\n
@@ -115,7 +114,7 @@ echo \"::1			localhost\" >> /etc/hosts\n
 echo \"127.0.1.1		Linux4life.localdomain	Linux4life\" >> /etc/hosts\n
 echo ' Entrez un mot de passe de root :'\n
 read mdp \n
-echo -e \"$mdp\\n$mdp\" | (passwd root)\n
+echo -e \"$mdp\\\n$mdp\" | (passwd root)\n
 if [ $efi==false ]\n
 then\n
 grub-install --target=i386-pc \"${disk}\"\n
