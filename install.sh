@@ -67,7 +67,7 @@ then
   	mkpart primary ext4 ${swap_fin} 100%
 else
 	efi=false
-	boot=2
+	boot=3
 	echo "LEGACY detecté"
 	parted --script "${disk}" -- mklabel gpt \
   	mkpart legacy_boot fat32 1 ${boot} \
