@@ -65,6 +65,7 @@ then
   	set 1 esp on \
   	mkpart primary linux-swap ${boot} ${swap_fin} \
   	mkpart primary ext4 ${swap_fin} 100%
+	mkfs.fat -F32  ${disk}1
 else
 	efi=false
 	boot=3
@@ -74,11 +75,9 @@ else
   	set 1 legacy_boot on \
   	mkpart primary linux-swap ${boot} ${swap_fin} \
   	mkpart primary ext4 ${swap_fin} 100%
-
 fi
 
 # formatage 
-mkfs.vfat -F 32 -s 2 ${disk}1
 mkswap ${disk}2
 swapon ${disk}2
 mkfs.ext4 ${disk}3
