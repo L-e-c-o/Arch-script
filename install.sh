@@ -1,8 +1,7 @@
 #!/bin/bash
 
-# verification de la connection
+# verification de la connexion
 test=$(ping -c 3  1.1.1.1 | awk -F " " {'print $6'})
-
 if [[ $test == *ttl* ]]
 then
 	echo "connexion etablie"
@@ -12,10 +11,8 @@ else
 fi	
 # mise a jour de l'horloge
 timedatectl set-ntp true
-
-# recup nom de disque
+# recuperation du nom de disque
 disk=$(fdisk -l | sed -n '1p' | awk -F " " {'print $2'} | sed  's/://')	
-
 # verification de l'espace disque min 2.5 gB
 space=$(fdisk -l | sed -n '1p' | awk -F " " {'print $5 / 1048576'})
 if [ $space -lt 2500 ]
@@ -23,10 +20,8 @@ then
 	echo "espace disque insuffisant."
 	exit
 fi
-
 # partionnement  
 ram=$( free --si --mega | grep Mem | awk -F " " {'print $2'})
-
 if [ $ram -lt 8000 ]
 then
 	swap=$ram
@@ -37,20 +32,17 @@ elif [ $ram -ge 16000 ]
 then
 	$swap=0
 fi
-
 # verif taille apres swap
-
 if [ $((space-swap)) -lt 2500 ]
 then
 	echo " espace insuffisant ."
 	exit
 fi
-
 # RAZ du disque
 wipefs -a $disk
 partprobe $disk
 
-# var part
+# var partition
 swap_fin=$(( $boot + $swap +1 ))
 root=$((space-(swap+boot)))
 
@@ -76,14 +68,13 @@ else
   	mkpart primary linux-swap ${boot} ${swap_fin} \
   	mkpart primary ext4 ${swap_fin} 100%
 fi
-
-# formatage 
+# formatage des partitions
 mkswap ${disk}2
 swapon ${disk}2
 mkfs.ext4 ${disk}3
 partprobe $disk
 
-# mnt
+# montage des partitions
 mount ${disk}3 /mnt
 if [ efi == true ]
 then
@@ -121,9 +112,7 @@ else\n
 grub-install --target=x86_64-efi --efi-directory=/efi --bootloader-id=\"Arch Linux\"\n
 fi\n
 grub-mkconfig -o /boot/grub/grub.cfg\n
-exit\n"
-	
-
+exit\n"	
 
 # chroot + script
 echo -e $config > /mnt/config.sh
