@@ -93,7 +93,6 @@ then
 	# bootstraping
 	pacstrap /mnt base linux linux-firmware grub dhcpcd efibootmg
 else
-then
 	# bootstraping
 	pacstrap /mnt base linux linux-firmware grub dhcpcd	
 fi
