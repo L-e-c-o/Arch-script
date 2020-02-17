@@ -17,30 +17,45 @@ timedatectl set-ntp true
 disk=$(fdisk -l | sed -n '1p' | awk -F " " {'print $2'} | sed  's/://')	
 
 # verification de l'espace disque min 2.5 gB
-space=$(fdisk -l | sed -n '1p' | awk -F " " {'print $5'})
-if [ $space -lt 2684354560 ]
+space=$(fdisk -l | sed -n '1p' | awk -F " " {'print $5 / 1048756'})
+if [ $space -lt 2500 ]
 then
 	echo "espace disque insuffisant."
 	exit
 fi
 
 # partionnement  
-ram=$( sed -n '1p' /proc/meminfo  | awk -F " " {'print $2'})
-ram=$(( $ram / 1024 ))
-swap=$ram
-root=$(($space-($swap+$boot)))
+ram=$( sed -n '1p' /proc/meminfo  | awk -F " " {'print $2 / 1024'})
 
-while [ $root -lt $swap  ]
-do
-	swap=$(($swap-$boot))
-	root=$(($root+$boot))
-done
+if [ $ram -lt 8000 ]
+then
+	swap=$ram
+elif [ $ram -ge 8000 && $ram -lt 16000]
+then
+	$swap=$(( $ram / 2))
+elif [ $ram -ge 16000 ]
+then
+	$swap=0
+fi
+
+# verif taille apres swap
+
+if [ ( $space - $swap ) -lt 2500 ]
+then
+	echo " espace insuffisant ."
+	exit
+fi
+
+#while [ $root -lt $swap  ]
+#do
+#	swap=$(($swap-$boot))
+#	root=$(($root+$boot))
+#done
 
 # test 1
 echo " test 1"
 echo " ram = $ram "
 echo " swap = $swap "
-echo " root = $root "
 echo " boot = $boot "
 
 # RAZ du disque
@@ -49,11 +64,12 @@ partprobe $disk
 
 # var part
 swap_fin=$(( $boot + $swap +1 ))
+root=$(($space-($swap+$boot)))
 
 # test 2
 echo " test 2 "
 echo " swap_fin = $swap_fin "
-echo " boot = $boor "
+echo " boot = $boot "
 
 # verifier le type de bios ---> ls /sys/firmware/efi/efivars
 if [ -e "/sys/firmware/efi/efivars" ]
