@@ -25,7 +25,7 @@ then
 fi
 
 # partionnement  
-ram=$( sed -n '1p' /proc/meminfo  | awk -F " " {'print $2'}) 
+ram=$(( sed -n '1p' /proc/meminfo  | awk -F " " {'print $2'} / 1024)) 
 swap=$(( $ram / 1048576))
 boot=512
 root=$(($space-($swap+$boot)))
@@ -63,7 +63,7 @@ then
 	parted --script "${disk}" -- mklabel gpt \
   	mkpart ESP fat32 1 ${boot} \
   	set 1 esp on \
-  	mkpart primary linux-swap ${boot}G ${swap_fin}G \
+  	mkpart primary linux-swap ${boot} ${swap_fin} \
   	mkpart primary ext4 ${swap_fin} 100%
 else
 	efi=false
@@ -71,7 +71,7 @@ else
 	parted --script "${disk}" -- mklabel gpt \
   	mkpart legacy_boot fat32 1 ${boot} \
   	set 1 boot on \
-  	mkpart primary linux-swap ${boot}G ${swap_fin}G \
+  	mkpart primary linux-swap ${boot} ${swap_fin} \
   	mkpart primary ext4 ${swap_fin} 100%
 
 fi
