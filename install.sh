@@ -40,7 +40,7 @@ fi
 
 # verif taille apres swap
 
-if [ ( $space - $swap ) -lt 2500 ]
+if [ $((space-swap)) -lt 2500 ]
 then
 	echo " espace insuffisant ."
 	exit
@@ -64,7 +64,7 @@ partprobe $disk
 
 # var part
 swap_fin=$(( $boot + $swap +1 ))
-root=$(($space-($swap+$boot)))
+root=$((space-(swap+boot)))
 
 # test 2
 echo " test 2 "
