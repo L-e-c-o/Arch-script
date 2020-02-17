@@ -28,7 +28,6 @@ fi
 ram=$( sed -n '1p' /proc/meminfo  | awk -F " " {'print $2'})
 ram=$(( $ram / 1024 ))
 swap=$ram
-boot=512
 root=$(($space-($swap+$boot)))
 
 while [ $root -lt $swap  ]
@@ -60,6 +59,7 @@ echo " boot = $boor "
 if [ -e "/sys/firmware/efi/efivars" ]
 then
 	efi=true
+	boot=512
 	echo "UEFI detecté"
 	parted --script "${disk}" -- mklabel gpt \
   	mkpart ESP fat32 1 ${boot} \
@@ -68,10 +68,11 @@ then
   	mkpart primary ext4 ${swap_fin} 100%
 else
 	efi=false
+	boot=2
 	echo "LEGACY detecté"
 	parted --script "${disk}" -- mklabel gpt \
   	mkpart legacy_boot fat32 1 ${boot} \
-  	set 1 boot on \
+  	set 1 bios_grub on \
   	mkpart primary linux-swap ${boot} ${swap_fin} \
   	mkpart primary ext4 ${swap_fin} 100%
 
