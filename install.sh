@@ -106,7 +106,7 @@ config="ln -sf /usr/share/zoneinfo/Europe/Paris /etc/localtime\n
 hwclock --systohc\n
 echo 'fr_FR.UTF-8 UTF-8' >> /etc/locale.gen\n
 mkdir /etc/locale.conf\n
-echo 'LANG=fr_FR.UTF-8' >> /etc/locale.conf\n
+echo LANG=fr_FR.UTF-8 >> /etc/locale.conf\n
 export LANG=/etc/locale.conf\n
 locale-gen\n
 echo KEYMAP=fr >> /etc/vconsole.conf\n
@@ -117,7 +117,7 @@ echo \"127.0.1.1		Linux4life.localdomain	Linux4life\" >> /etc/hosts\n
 echo ' Entrez un mot de passe de root :'
 read mdp
 echo -e \"${mdp}\\n${mdp}\" | (passwd root)\n
-if [ efi==false ]
+if [ efi==false ]\n
 then\n
 grub-install --target=i386-pc \"${DISK_NAME}\"\n
 else\n
