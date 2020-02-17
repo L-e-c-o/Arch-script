@@ -25,8 +25,9 @@ then
 fi
 
 # partionnement  
-ram=$(( sed -n '1p' /proc/meminfo  | awk -F " " {'print $2'} / 1024)) 
-swap=$(( $ram / 1048576))
+ram=$( sed -n '1p' /proc/meminfo  | awk -F " " {'print $2'})
+ram=$(( $ram / 1024 ))
+swap=$ram
 boot=512
 root=$(($space-($swap+$boot)))
 
