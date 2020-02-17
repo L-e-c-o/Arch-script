@@ -17,7 +17,7 @@ timedatectl set-ntp true
 disk=$(fdisk -l | sed -n '1p' | awk -F " " {'print $2'} | sed  's/://')	
 
 # verification de l'espace disque min 2.5 gB
-space=$(fdisk -l | sed -n '1p' | awk -F " " {'print $5 / 1048756'})
+space=$(fdisk -l | sed -n '1p' | awk -F " " {'print $5 / 1048576'})
 if [ $space -lt 2500 ]
 then
 	echo "espace disque insuffisant."
