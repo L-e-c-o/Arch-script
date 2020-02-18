@@ -81,7 +81,7 @@ then
 	mkdir -p /mnt/efi
 	mount ${disk}1 /mnt/efi
 	# bootstraping
-	pacstrap /mnt base linux linux-firmware grub dhcpcd efibootmg
+	pacstrap /mnt base linux linux-firmware grub dhcpcd efibootmgr
 else
 	# bootstraping
 	pacstrap /mnt base linux linux-firmware grub dhcpcd	
