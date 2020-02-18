@@ -76,7 +76,7 @@ partprobe $disk
 
 # montage des partitions
 mount ${disk}3 /mnt
-if [ efi == true ]
+if [ $efi == true ]
 then
 	mkdir -p /mnt/efi
 	mount ${disk}1 /mnt/efi
@@ -105,7 +105,7 @@ echo \"127.0.1.1		Linux4life.localdomain	Linux4life\" >> /etc/hosts\n
 echo ' Entrez un mot de passe de root :'\n
 read mdp \n
 echo -e \"\$mdp\\n\$mdp\" | (passwd root)\n
-if [ ${efi}==false ]\n
+if [ ${efi} == false ]\n
 then\n
 grub-install --target=i386-pc \"${disk}\"\n
 else\n
