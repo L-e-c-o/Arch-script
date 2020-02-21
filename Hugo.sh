@@ -1,133 +1,222 @@
-#!/bin/bash
+#!/usr/bin/bash
 
-# verification de la connection
-test=$(ping -c 3  1.1.1.1 | awk -F " " {'print $6'})
+#BEGIN HELPER FUNCTIONS
+RED="\u001b[31m"
+GREEN="\u001b[32m"
+BLUE="\u001b[34m"
+YELLOW="\u001b[33m"
+RESET="\u001b[0m"
 
-if [[ $test == *ttl* ]]
-then
-	echo "connexion etablie"
-else
-	echo "Veuilliez disposer d'une connexion internet valide."
-	exit
-fi	
-# mise a jour de l'horloge
-timedatectl set-ntp true
+intro() {
+    echo -e "[ $(date +"%T") ][$BLUE EHLO $RESET] $@"
+}
+stdout() {
+    echo -e "[ $(date +"%T") ][$GREEN INFO $RESET] $@"
+}
+stderr() {
+    echo -e "[ $(date +"%T") ][$RED FAIL $RESET] $@ :(" 1>&2
+    exit
+}
+#END HELPER FUNCTIONS
 
-# recup nom de disque
-disk=$(fdisk -l | sed -n '1p' | awk -F " " {'print $2'} | sed  's/://')	
+#BEGIN CORE FUNCTIONS
+earlyChecks() {
+    #test for correct Arch Linux
+    if [ ! -e "/etc/arch-release" ]; then
+        stderr "Not on Arch Linux, exiting"
+    fi
 
-# verification de l'espace disque min 2.5 gB
-space=$(fdisk -l | sed -n '1p' | awk -F " " {'print $5 / 1048576'})
-if [ $space -lt 2500 ]
-then
-	echo "espace disque insuffisant."
-	exit
-fi
+    #test for UEFI
+    export INS_IS_EFI=0
+    if [ "$(ls /sys/firmware/efi/efivars 2> /dev/null | wc -l)" -gt "0" ]; then
+        stdout "This system is UEFI capable"
+        export INS_IS_EFI=1
+    fi
 
-# partionnement  
-ram=$( free --si --mega | grep Mem | awk -F " " {'print $2'})
+    #test for network
+    if [ ! "$(ping -qc1 1.1.1.1)" ]; then
+        stderr "No internet access, exiting"
+    fi
+    stdout "All checks passed, beginning install"
+}
 
-if [ $ram -lt 8000 ]
-then
-	swap=$ram
-elif [ $ram -ge 8000 && $ram -lt 16000]
-then
-	$swap=$(( $ram / 2))
-elif [ $ram -ge 16000 ]
-then
-	$swap=0
-fi
+prepare() {
+    timedatectl set-ntp true
+    stdout "NTP enabled"
 
-# verif taille apres swap
+    #prompt for disk
+    DISKS=$(lsblk -Sne7,11 -oNAME,SIZE)
+    if [ "$(echo "$DISKS" | wc -l)" -eq 1 ]; then
+        stdout "Only one drive was found, using it"
+        export INS_DISK_NAME="/dev/$(echo "$DISKS" | cut -d' ' -f1)"
+    else
+        stdout "List of available drives :"
+        echo "$DISKS" | while read l; do stdout $l; done
+        DISK=''
+        while [ -z $DISK ] || [ ! -e $INS_DISK_NAME ]; do
+            read -p "Enter the desired drive name : " DISK < /dev/tty
+            export INS_DISK_NAME="/dev/$DISK"
+        done
+    fi
+    stdout "Install drive is $INS_DISK_NAME"
 
-if [ $((space-swap)) -lt 2500 ]
-then
-	echo " espace insuffisant ."
-	exit
-fi
+    #check for minimal size based on self measured requirements
+    #this script produces at best a ~1.6GB install with a 256MB boot partition
+    if [ "$(lsblk -bnoSIZE -d $INS_DISK_NAME)" -lt "2000000000" ]; then
+        stderr "Selected drive is too small. Arch Linux requires a minimum of 2GB, exiting"
+    fi
+}
 
-# RAZ du disque
-wipefs -a $disk
-partprobe $disk
+formatDisk() {
+    #stop script on command error
+    set -e
 
-# var part
-swap_fin=$(( $boot + $swap +1 ))
-root=$((space-(swap+boot)))
+    #wipe drive
+    wipefs -a "$INS_DISK_NAME"
+    partprobe "$INS_DISK_NAME"
+    stdout "Disk has been wiped."
 
-# verifier le type de bios 
-if [ -e "/sys/firmware/efi/efivars" ]
-then
-	efi=true
-	boot=512
-	echo "UEFI detecté"
-	parted --script "${disk}" -- mklabel gpt \
-  	mkpart ESP fat32 1 ${boot} \
-  	set 1 esp on \
-  	mkpart primary linux-swap ${boot} ${swap_fin} \
-  	mkpart primary ext4 ${swap_fin} 100%
-else
-	efi=false
-	boot=2
-	echo "LEGACY detecté"
-	parted --script "${disk}" -- mklabel gpt \
-  	mkpart legacy_boot fat32 1 ${boot} \
-  	set 1 bios_grub on \
-  	mkpart primary linux-swap ${boot} ${swap_fin} \
-  	mkpart primary ext4 ${swap_fin} 100%
+    #create new GPT partition table
+    echo "label: gpt" | sfdisk -q "$INS_DISK_NAME"
+    partprobe "$INS_DISK_NAME"
+    stdout "New GPT partiion table created"
 
-fi
+    #create UEFI boot partition and format it
+    if [ "$INS_IS_EFI" -eq "1" ]; then
+        echo ", 260M, U" | sfdisk -qa "$INS_DISK_NAME"
+        partprobe "$INS_DISK_NAME"
+        stdout "UEFI boot partition created. Formatting..."
 
-# formatage 
-mkfs.vfat -F32 -s 2 ${disk}1
-mkswap ${disk}2
-swapon ${disk}2
-mkfs.ext4 ${disk}3
-partprobe $disk
+        mkfs.fat -F32 "${INS_DISK_NAME}1"
+        partprobe "$INS_DISK_NAME"
+        stdout "Boot partition formatting done."
+    #otherwise create GRUB BIOS partition
+    else
+        echo ", 1MiB, 21686148-6449-6E6F-744E-656564454649" | sfdisk -qa "$INS_DISK_NAME"
+        partprobe "$INS_DISK_NAME"
+        stdout "GRUB BIOS partition created."
+    fi
 
-# mnt
-mount ${disk}3 /mnt
-if [ efi == true ]
-then
-	mkdir -p /mnt/efi
-	mount ${disk}1 /mnt/efi
-	# bootstraping
-	pacstrap /mnt base linux linux-firmware grub dhcpcd efibootmg
-else
-	# bootstraping
-	pacstrap /mnt base linux linux-firmware grub dhcpcd	
-fi
+    #create rest of disk Linux partition
+    echo ", , L" | sfdisk -qa "$INS_DISK_NAME"
+    partprobe "$INS_DISK_NAME"
+    stdout "All partitions created. Time to format..."
 
-# generation du fichier fstab
-genfstab -U /mnt >> /mnt/etc/fstab
+    mkfs.ext4 -F "${INS_DISK_NAME}2"
+    partprobe "$INS_DISK_NAME"
 
-# script de config
-config="ln -sf /usr/share/zoneinfo/Europe/Paris /etc/localtime\n
-hwclock --systohc\n
-echo fr_FR.UTF-8 UTF-8 >> /etc/locale.gen\n
-echo LANG=fr_FR.UTF-8 >> /etc/locale.conf\n
-export LANG=fr_FR.UTF-8\n
-locale-gen\n
-echo KEYMAP=fr >> /etc/vconsole.conf\n
-echo Linux4life >> /etc/hostname\n
-echo \"127.0.0.1		localhost\" >> /etc/hosts\n
-echo \"::1			localhost\" >> /etc/hosts\n
-echo \"127.0.1.1		Linux4life.localdomain	Linux4life\" >> /etc/hosts\n
-echo ' Entrez un mot de passe de root :'\n
-read mdp \n
-echo -e \"$mdp\\n$mdp\" | (passwd root)\n
-if [ ${efi}==false ]\n
-then\n
-grub-install --target=i386-pc \"${disk}\"\n
-else\n
-grub-install --target=x86_64-efi --efi-directory=/efi --bootloader-id=\"My Firs Arch Linux\"\n
-fi\n
-grub-mkconfig -o /boot/grub/grub.cfg\n
-exit\n"
-	
+    stdout "Formatting done!"
 
+    #remove flag
+    set +e
+}
 
-# chroot + script
-echo -e $config > /mnt/config.sh
-chmod +x /mnt/config.sh
-arch-chroot /mnt ./config.sh
+updateMirrors() {
+    stdout "Fetching new mirrorlist..."
+    curl -sL "https://www.archlinux.org/mirrorlist/?country=FR&country=GB&protocol=https&ip_version=4&ip_version=6&use_mirror_status=on" -o /etc/pacman.d/mirrorlist
+    sed -i 's/^#Server/Server/' /etc/pacman.d/mirrorlist
+    stdout "New mirrorlist installed. Time to kick ass!"
+}
 
+install() {
+    stdout "Mounting devices for install..."
+
+    mount "${INS_DISK_NAME}2" /mnt
+    if [ "$INS_IS_EFI" -eq "1" ]; then
+        mkdir -p /mnt/efi
+        mount "${INS_DISK_NAME}1" /mnt/efi
+    fi
+
+    PKGLIST="base linux linux-firmware dhcpcd grub"
+
+    #install Intel microcode on compatible computers
+    if [ "$(grep -m1 'vendor_id' /proc/cpuinfo | cut -d' ' -f2 )" == "GenuineIntel" ]; then
+        PKGLIST="$PKGLIST intel-ucode"
+    fi
+
+    #installed required EFI tool when needed
+    if [ "$INS_IS_EFI" -eq "1" ]; then
+        PKGLIST="$PKGLIST efibootmgr"
+    fi
+
+    stdout "Bootstrap time!"
+    pacstrap /mnt $PKGLIST
+
+    genfstab -U /mnt >> /mnt/etc/fstab
+    stdout "Done! /etc/fstab generated."
+    stdout "Preparing the ground for Stage 2..."
+
+    #set up correct locales
+    sed -i 's/^#en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /mnt/etc/locale.gen
+    sed -i 's/^#fr_FR.UTF-8 UTF-8/fr_FR.UTF-8 UTF-8/' /mnt/etc/locale.gen
+    echo "LANG=fr_FR.UTF-8" > /mnt/etc/locale.conf
+    echo "KEYMAP=fr" > /mnt/etc/vconsole.conf
+
+    cp "$(realpath $0)" /mnt/stage2.sh
+    stdout "Handing control to Stage 2!"
+    arch-chroot /mnt ./stage2.sh $INS_IS_EFI $INS_DISK_NAME
+}
+
+#this is the actual installation run
+run() {
+    clear
+    loadkeys fr
+    intro "Welcome to the Automated Arch Linux installer!"
+    intro "By Sean MATTHEWS & Hugo COURTIAL (c) 2020"
+    if earlyChecks; then
+        prepare
+        formatDisk
+        updateMirrors
+        install
+    fi
+}
+
+#this is what's run inside the finished chroot
+#passed arguments : IS_EFI, DISK_NAME
+stage2() {
+    intro "Now running Stage 2!"
+
+    stdout "Setting up timezone & locale..."
+    ln -sf /usr/share/zoneinfo/Europe/Paris /etc/localtime
+    hwclock --systohc
+    locale-gen
+
+    #set hostname based on user input
+    HOST=''
+    while [ -z $HOST ]; do
+        read -p "Enter the desired host name : " HOST < /dev/tty
+    done
+    echo "$HOST" > /etc/hostname
+    echo -e "127.0.0.1  localhost\n::1     localhost\n127.0.1.1   $HOST.localdomain  $HOST" >> /etc/hosts
+
+    #set up GRUB
+    stdout "Installing GRUB..."
+    if [ "$1" -eq "1" ]; then
+        grub-install --target=x86_64-efi --efi-directory=/efi --bootloader-id="Arch Linux"
+    else
+        grub-install --target=i386-pc $2
+    fi
+
+    stdout "GRUB's here! Generating configuration..."
+    grub-mkconfig -o /boot/grub/grub.cfg
+
+    #set root password
+    stdout "One more thing..."
+    passwd
+    rm "$(realpath $0)"
+    stdout "DONE! Exiting Stage 2. Feel free to reboot afterwards :D"
+}
+#END CORE FUNCTIONS
+
+#script startup, based on its own name
+export INS_SELF="$(basename $0)"
+case $INS_SELF in
+    stage2.sh)
+        stage2 $@
+        ;;
+    sh|bash)
+        stderr "Please run the script as its own file"
+        ;;
+    *)
+        run
+esac
