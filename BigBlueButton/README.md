@@ -6,3 +6,4 @@ Syntax example:
 
 Don't give your output file a extension the script will do it for you.
   
+![bbb_logs.png](bbb_logs.png)
