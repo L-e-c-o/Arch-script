@@ -1,5 +1,5 @@
 ### GloBotExam
-a simple script to atomate global exam TOEIC pratice time.
+a simple script to automate global exam connection time (with Firefox only).
 
 # Installation
 git clone https://github.com/L-e-c-o/Scripts.git
@@ -8,7 +8,7 @@ pip3 install selenium
 
 cd GloBotExam
 
-add the driver of your favorite browser to your PATH env variable
+add the appropriate Firefox driver to your PATH. 
 
 python3 GloBotExam.py
 
