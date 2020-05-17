@@ -12,7 +12,7 @@ art = '''        __        _______   ______
        $$$$$$$$/ $$$$$$$/  $$$$$$/ 
                             
                             
-       Made with :hearts: by Astika & léco.                   
+       Made by Astika & léco.                   
 
 '''
 print(art)
