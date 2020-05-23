@@ -200,15 +200,25 @@ stage2() {
     stdout "GRUB's here! Generating configuration..."
     grub-mkconfig -o /boot/grub/grub.cfg
 
+    #create user
+    USER=''
+    while [ -z $USER ]; do
+        read -p "Enter the new user name : " USER < /dev/tty
+    done
+    useradd -m $USER
+    stdout "Enter new user password : "
+    passwd $USER 
+
     #set root password
-    stdout "One more thing..."
-    passwd
+    stdout "Enter root password : "
+    passwd 
     rm "$(realpath $0)"
 
-    
+    #enable iptables
     systemctl enable iptables
-    #enable forwarding
-    echo -e "net.ipv4.ip_forward=1\nnet.ipv6.conf.default.forwarding=1\nnet.ipv6.conf.all.forwarding=1" >> /etc/sysctl.d/30-ipforward.conf
+    #enable ssh
+    systemctl enable sshd
+    systemctl start sshd
     # RULES HERE
     iptables -A INPUT -p tcp --dport ssh -m conntrack --ctstate NEW -m recent --set 
     iptables -A INPUT -p tcp --dport ssh -m conntrack --ctstate NEW -m recent --update --seconds 60 --hitcount 2 -j DROP
