@@ -214,6 +214,8 @@ stage2() {
     passwd 
     rm "$(realpath $0)"
 
+    #enable dhcpcd
+    systemctl enable dhcpcd.service
     #enable iptables
     systemctl enable iptables
     #enable ssh
