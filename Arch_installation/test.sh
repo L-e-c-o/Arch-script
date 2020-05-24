@@ -206,16 +206,16 @@ stage2() {
         read -p "Enter the new user name : " USER < /dev/tty
     done
     useradd -m $USER
-    stdout "Enter new user password : "
+    stdout "\nFor $USER"
     passwd $USER 
 
     #set root password
-    stdout "Enter root password : "
+    stdout "\nFor root"
     passwd 
     rm "$(realpath $0)"
 
     #enable dhcpcd
-    systemctl enable dhcpcd.service
+    systemctl enable dhcpcd
     #enable iptables
     systemctl enable iptables
     #enable ssh
